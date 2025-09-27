@@ -1,0 +1,259 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Junk Silver Calculator</title>
+<style>
+  *{box-sizing:border-box}
+  :root{
+    --body-bg:#ffffff; --text-color:#222; --input-bg:#f9f9f9; --input-border:#ccc;
+    --result-bg:#f5f5f5; --desc-color:#444; --highlight-border:#333; --highlight-bg:#eaeaea;
+    --diffPositive:#1d8f1d; --diffNegative:#c22; --diffPercentPositive:#44a944; --diffPercentNegative:#d94a4a;
+    --button-bg:#e0e0e0; --button-text:#222;
+    --price-highlight-bg:#ddd; --price-highlight-border:#222;
+  }
+  [data-theme="dark"]{
+    --body-bg:#121212; --text-color:#e0e0e0; --input-bg:#1e1e1e; --input-border:#555;
+    --result-bg:#1e1e1e; --desc-color:#ccc; --highlight-border:#fff; --highlight-bg:#2a2a2a;
+    --diffPositive:#00b34a; --diffNegative:#ff5252; --diffPercentPositive:#5cd97c; --diffPercentNegative:#ff7a7a;
+    --button-bg:#444; --button-text:#eee;
+    --price-highlight-bg:#2f2f2f; --price-highlight-border:#fff;
+  }
+  body{
+    font-family:system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+    width:100%; max-width:640px; margin:0 auto; padding:6.5rem 1rem 2rem;
+    background:var(--body-bg); color:var(--text-color); position:relative;
+  }
+  .buttonContainer{
+    position:fixed; top:1rem; right:1rem; display:flex; flex-direction:column; gap:.5rem; z-index:1000;
+  }
+  .topButton{
+    padding:.4rem .8rem; border:none; border-radius:6px; background:var(--button-bg);
+    color:var(--button-text); font-weight:700; cursor:pointer;
+  }
+  #liveSilverPrice {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    background: var(--result-bg);
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    padding: .28rem .5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color);
+    white-space: nowrap;
+    z-index: 1000;
+  }
+  #liveSilverPrice .highlightPrice {
+    border: 2px solid var(--price-highlight-border);
+    background: var(--price-highlight-bg);
+    padding: 0 .3rem;
+    border-radius: 4px;
+    margin-left: .35rem;
+    font-weight: 700;
+  }
+  .thin { 
+    font-weight:400; 
+    font-size:0.7em; 
+    vertical-align:top; 
+    margin-left:1px; 
+  }
+  h2{ text-align:center; margin:0 0 .25rem 0; font-size:1.725rem; line-height:1.2 }
+  h3{ text-align:center; margin:0 0 1rem 0; font-size:1.1rem; font-weight:500; color:var(--desc-color) }
+  label{ display:block; margin:12px 0 6px; font-weight:600; color:var(--text-color); }
+  .input-wrapper{ position:relative; width:100%; }
+  .input-wrapper span{ position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--desc-color); pointer-events:none; }
+  input{
+    width:100%; padding:.7rem .6rem .7rem 1.8rem; font-size:1rem; border-radius:6px;
+    border:1px solid var(--input-border); background:var(--input-bg); color:var(--text-color);
+  }
+  input:focus{ outline:none; border-color:#0077cc; box-shadow:0 0 0 3px rgba(0,119,204,0.12); }
+  input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input[type=number]{-moz-appearance:textfield}
+  .resultRow{ display:flex; gap:12px; margin-top:14px; flex-wrap:wrap }
+  .resultCol{ flex:1 1 0; min-width:0; padding:.7rem; border-radius:6px; border:1px solid #ddd; background:var(--result-bg) }
+  .highlight{ border:3px solid var(--highlight-border); background:var(--highlight-bg) }
+  .answerLine{ font-size:1.05rem; font-weight:700; margin-bottom:.25rem; color:var(--text-color) }
+  .desc{ font-size:.95rem; color:var(--desc-color); line-height:1.35 }
+  .diffBox{ display:inline-block; padding:0 .15rem; border:1px solid #999; border-radius:4px; margin-right:6px; font-weight:700 }
+  .diffPositive{ border-color:var(--diffPositive); color:var(--diffPositive) }
+  .diffNegative{ border-color:var(--diffNegative); color:var(--diffNegative) }
+  .diffPercentPositive{ color:var(--diffPercentPositive); font-weight:700; margin-left:6px }
+  .diffPercentNegative{ color:var(--diffPercentNegative); font-weight:700; margin-left:6px }
+  @media (max-width:460px){
+    body{padding:6.5rem .8rem 1.5rem}
+    h2{font-size:1.3rem}
+    h3{font-size:1rem}
+    .topButton{padding:.35rem .7rem; font-size:.9rem}
+    input{padding-left:1.6rem; font-size:1rem}
+  }
+</style>
+</head>
+<body>
+  <div id="liveSilverPrice">Loading...</div>
+  <div class="buttonContainer">
+    <button id="themeToggle" class="topButton">Light Mode</button>
+    <button id="calcToggle" class="topButton">Silver → Paper</button>
+  </div>
+  <h2 id="mainTitle">Junk Silver Calculator</h2>
+  <h3 id="modeSubtitle">(Paper → Silver)</h3>
+  <label for="silver">Silver price per ounce (USD)</label>
+  <div class="input-wrapper">
+    <span>$</span>
+    <input id="silver" name="silver" type="number" step="any" placeholder="0">
+  </div>
+  <label id="priceLabel" for="price">Item price in USD</label>
+  <div class="input-wrapper">
+    <span>$</span>
+    <input id="price" name="price" type="number" step="any" placeholder="0">
+  </div>
+  <div id="outRow" class="resultRow" style="display:none">
+    <div id="exactCol" class="resultCol">
+      <div id="outAnswer" class="answerLine" aria-live="polite"></div>
+      <div class="desc" id="exactDesc"></div>
+    </div>
+  </div>
+  <div id="roundedContainer" class="resultRow" style="display:none">
+    <div id="nearestCol" class="resultCol"></div>
+    <div id="otherCol" class="resultCol"></div>
+  </div>
+<script>
+const root = document.documentElement;
+const themeToggle = document.getElementById('themeToggle');
+const calcToggle = document.getElementById('calcToggle');
+const modeSubtitle = document.getElementById('modeSubtitle');
+const priceLabel = document.getElementById('priceLabel');
+const liveSilverPrice = document.getElementById('liveSilverPrice');
+const silver = document.getElementById('silver');
+const price = document.getElementById('price');
+const outRow = document.getElementById('outRow');
+const outAnswer = document.getElementById('outAnswer');
+const exactDesc = document.getElementById('exactDesc');
+const exactCol = document.getElementById('exactCol');
+const roundedContainer = document.getElementById('roundedContainer');
+const nearestCol = document.getElementById('nearestCol');
+const otherCol = document.getElementById('otherCol');
+let mode = 'paperToSilver';
+function makeCol(faceValue, diff, totalVal, itemPrice, label, forcePlus){
+  const percent = itemPrice === 0 ? 0 : (diff / itemPrice) * 100;
+  const diffClass = diff >= 0 ? 'diffPositive' : 'diffNegative';
+  const percentClass = diff >= 0 ? 'diffPercentPositive' : 'diffPercentNegative';
+  const percentSign = diff >= 0 && forcePlus ? '+' : '';
+  return `
+    <div class="answerLine"><strong>$${faceValue.toFixed(2)}</strong> ${label}</div>
+    <div class="desc">
+      Difference: <span class="diffBox ${diffClass}">${(diff >= 0 ? '+$' : '$')}${diff.toFixed(2)}</span>
+      <span class="${percentClass}">(${percentSign}${percent.toFixed(2)}%)</span><br>
+      <strong>$${totalVal.toFixed(2)}</strong> instead of <strong>$${itemPrice.toFixed(2)}</strong>
+    </div>
+  `;
+}
+function formatWithCommas(num){
+  return num.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function compute(){
+  const s = parseFloat(silver.value);
+  const p = parseFloat(price.value);
+  if (!isFinite(s) || s <= 0 || !isFinite(p) || p < 0){
+    outRow.style.display = 'none';
+    roundedContainer.style.display = 'none';
+    return;
+  }
+  if (mode === 'paperToSilver'){
+    const face = p / (s * 0.715);
+    const faceStr3 = (Math.round(face * 1000) / 1000).toFixed(3);
+    const mainPart = (Math.round(face * 100) / 100).toFixed(2);
+    const lastDigit = faceStr3.charAt(faceStr3.length - 1);
+    outRow.style.display = 'flex';
+    outAnswer.innerHTML = `<strong>$${mainPart}</strong><span class="thin">${lastDigit}</span>`;
+    exactDesc.textContent = "Exact dollars face value in 90% junk silver";
+    const roundedHundredths = Math.round(face * 100) / 100;
+    const cents = Math.round(roundedHundredths * 100);
+    const divisibleBy10 = (cents % 10 === 0);
+    const divisibleBy25 = (cents % 25 === 0);
+    const candidates = [];
+    const steps = [0.10, 0.25];
+    steps.forEach(step => {
+      const down = Math.floor(face / step) * step;
+      const up = Math.ceil(face / step) * step;
+      candidates.push({face: down, val: down * 0.715 * s, diff: (down * 0.715 * s) - p, label: `Rounded Down`, plus: false});
+      candidates.push({face: up, val: up * 0.715 * s, diff: (up * 0.715 * s) - p, label: `Rounded Up`, plus: true});
+    });
+    const uniq = [];
+    const seen = new Set();
+    candidates.forEach(c => {
+      const key = c.face.toFixed(4);
+      if (!seen.has(key)) { seen.add(key); uniq.push(c); }
+    });
+    uniq.sort((a,b) => Math.abs(face - a.face) - Math.abs(face - b.face));
+    const nearest = uniq[0];
+    const other = uniq[1] || uniq[0];
+    roundedContainer.style.display = 'flex';
+    nearestCol.innerHTML = makeCol(nearest.face, nearest.diff, nearest.val, p, nearest.label, nearest.plus);
+    otherCol.innerHTML = makeCol(other.face, other.diff, other.val, p, other.label, other.plus);
+    if (divisibleBy10 || divisibleBy25){
+      exactCol.classList.add('highlight');
+      nearestCol.classList.remove('highlight');
+      otherCol.classList.remove('highlight');
+    } else {
+      exactCol.classList.remove('highlight');
+      nearestCol.classList.add('highlight');
+      otherCol.classList.remove('highlight');
+    }
+  } else {
+    const silverValue = p * 0.715 * s;
+    outRow.style.display = 'flex';
+    outAnswer.innerHTML = "<strong>$" + formatWithCommas(silverValue) + "</strong>";
+    exactDesc.textContent = "Total paper value from entered face value of 90% junk silver";
+    roundedContainer.style.display = 'none';
+    exactCol.classList.remove('highlight');
+  }
+}
+[silver, price].forEach(el => el.addEventListener('input', compute));
+themeToggle.addEventListener('click', () => {
+  const current = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  root.setAttribute('data-theme', next);
+  themeToggle.textContent = next === 'dark' ? 'Light Mode' : 'Dark Mode';
+});
+calcToggle.addEventListener('click', () => {
+  mode = mode === 'paperToSilver' ? 'silverToPaper' : 'paperToSilver';
+  if (mode === 'silverToPaper'){
+    modeSubtitle.textContent = '(Silver → Paper)';
+    priceLabel.textContent = 'Face value of 90% silver';
+    calcToggle.textContent = 'Paper → Silver';
+  } else {
+    modeSubtitle.textContent = '(Paper → Silver)';
+    priceLabel.textContent = 'Item price in USD';
+    calcToggle.textContent = 'Silver → Paper';
+  }
+  compute();
+});
+async function fetchSilverPrice(){
+  try {
+    const res = await fetch("https://www.goldapi.io/api/XAG/USD", {
+      headers: { "x-access-token": "goldapi-2a6smg2hmjji-io", "Content-Type": "application/json" }
+    });
+    if (!res.ok) throw new Error("Network response not ok");
+    const data = await res.json();
+    if (data && data.price) {
+      liveSilverPrice.innerHTML = `Current Silver Price <span class="highlightPrice">$${parseFloat(data.price).toFixed(2)}</span>`;
+    } else {
+      liveSilverPrice.textContent = "Current Silver Price (error)";
+    }
+  } catch (e) {
+    liveSilverPrice.textContent = "Current Silver Price (error)";
+  }
+}
+fetchSilverPrice();
+root.setAttribute('data-theme','dark');
+themeToggle.textContent = 'Light Mode';
+calcToggle.textContent = 'Silver → Paper';
+modeSubtitle.textContent = '(Paper → Silver)';
+compute();
+</script>
+</body>
+</html>
